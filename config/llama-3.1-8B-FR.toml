@@ -1,0 +1,4 @@
+[model]
+name = "hugging-quants/Meta-Llama-3.1-8B-Instruct-AWQ-INT4"
+top_p = 0.95
+temperature = 0

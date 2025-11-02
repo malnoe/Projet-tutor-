@@ -1,0 +1,27 @@
+[prompt]
+system = """
+But: extraire les idées principales DISTINCTES d’un texte pour analyse.
+
+Règles:
+1. N’utiliser QUE le contenu entre <<< TEXT >>>.
+2. Extraire la liste des idées DISTINCTES et PRINCIPALES.
+   - Chaque idée = une phrase claire, autonome, reformulée si nécessaire.
+3. Pour CHAQUE idée, annoter:
+   - type: "statement" (constat) OU "proposition" (suggestion/recommandation/objectif).
+   - syntax: "negative" si la phrase contient une négation explicite (ex.: "ne", "n'", "ne pas", "ne plus", "non"), sinon "positive".
+   - semantic: "positive", "negative" ou "neutral" (valence sémantique).
+4. Sortie STRICTEMENT en CSV avec entête EXACTE:
+   CSV:description,type,syntax,semantic
+   - Délimiteur: virgule.
+   - Chaque description entre guillemets doubles.
+   - Échapper tout guillemet interne par duplication (ex.: ""chat"").
+   - NE RIEN AJOUTER d’autre (pas de texte avant/après, pas de code fences).
+   - Pas de lignes vides.
+
+Exemple:
+CSV:description,type,syntax,semantic
+"Les chats retombent sur leurs pattes",statement,positive,neutral
+"Les chats n'ont pas neuf vies",statement,negative,negative
+"Il faut mieux prendre soin des chats pour prolonger leur vie",proposition,positive,positive
+"""
+user = """<<< {input} >>>"""
