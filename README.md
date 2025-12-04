@@ -11,8 +11,10 @@ Le travail est réparti sur 2 espaces de travail différents et complémentaires
 Les 2 espaces sont organisés de la même manière ; ils sont déclinés en 3 dossiers : 
 
 - **data** : Les fichiers de données sur lesquels nous travaillons, qu'ils soient extraits à partir de LLMs ou construits à la main.
-- **docs** : Les fichiers de présentation du projet, des soutenances, notes de réunion, etc.
+- **docs** : Les fichiers de présentation du projet, des soutenances, etc.
 - **results** : Les fichiers de production (analyses, évaluation, brainstormings, etc.).
+
+Le Google Drive contient un dossier supplémentaire, **notes**, contenant les notes de réunions.
 
 Chaque fichier est nommé selon la convention suivante : "XX_AAMMJJ_Nom.ext", où XX correspond à la version/phase du fichier, AAMMJJ sa date de création et le "Nom" est séparé par des **majuscules** s'il est composé.
 </details>
