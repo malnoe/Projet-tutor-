@@ -24,6 +24,7 @@ def extraction_pipeline(
         extract_model: str = "llama3:8b-instruct-q4_K_M",
         embed_model: str = "sentence-transformers/all-MiniLM-L6-v2",
         device: str = "cpu",
+        return_intermediate: bool = False,
         error_filter: str = "Oui",
         rouge_filter: float = 0.0,
         qualit_filter: float = 0.0
@@ -36,13 +37,15 @@ def extraction_pipeline(
         extract_model : Modèle Ollama pour l'extraction (défaut = "llama3:8b-instruct-q4_K_M").
         embed_model : Modèle de sentence-transformers pour les embeddings (défaut = "sentence-transformers/all-MiniLM-L6-v2").
         device : mode de calcul des embeddings (défaut = "cpu").
+        return_intermediate : retourne aussi le DataFrame intermédiaire des extractions (défaut = False).
         error_filter : "Oui" pour filtrer les erreurs de parsing (défaut = "Oui").
         rouge_filter : Seuil minimal pour le score ROUGE (défaute = 0 : pas de filtre).
         qualit_filter : Seuil minimal pour le score QualIT (défaut = 0 : pas de filtre).
     Returns :
         DataFrame avec les extractions et leurs scores.
+        Si return_intermediate=True, retourne un tuple (data_extracted, result).
     """
-
+    
     # Vérification du dataframe
     required_columns = {"author_id", "contribution"}
     if not required_columns.issubset(df.columns):
@@ -99,8 +102,34 @@ def extraction_pipeline(
                         csv_text = "\n".join(lines)
             try:
                 ideas_df = pd.read_csv(StringIO(csv_text), dtype=str, keep_default_na=False)
-            except Exception as e:
-                raise LLMBadCSV(f"CSV illisible: {e}")
+            except Exception:
+                # Fallback robuste: tolère entête manquante et virgules dans la description
+                lines = [l for l in csv_text.splitlines() if l.strip()]
+                if not lines:
+                    raise LLMBadCSV("CSV vide après nettoyage")
+                # Détecte le délimiteur principal
+                sample = lines[:5]
+                comma_count = sum(l.count(",") for l in sample)
+                semi_count = sum(l.count(";") for l in sample)
+                delim = ";" if semi_count > comma_count else ","
+                parsed_rows = []
+                for line in lines:
+                    cleaned_line = line.strip()
+                    if cleaned_line.lower().startswith("csv:"):
+                        cleaned_line = cleaned_line[4:].strip()
+                    normalized = cleaned_line.replace(" ", "").lower()
+                    # Ignore les entêtes ou lignes bruitées
+                    if normalized in {"description,type,syntax,semantic", "description;type;syntax;semantic"}:
+                        continue
+                    if normalized.startswith("description") and "type" in normalized and "syntax" in normalized and "semantic" in normalized:
+                        continue
+                    parts = [p.strip() for p in cleaned_line.rsplit(delim, 3)]
+                    if len(parts) != 4:
+                        continue
+                    parsed_rows.append(parts)
+                if not parsed_rows:
+                    raise LLMBadCSV("Entête CSV invalide")
+                ideas_df = pd.DataFrame(parsed_rows, columns=["description", "type", "syntax", "semantic"])
             expected_cols = ["description", "type", "syntax", "semantic"]
             missing = [c for c in expected_cols if c not in ideas_df.columns]
             if missing:
@@ -126,9 +155,10 @@ def extraction_pipeline(
         ideas_df.insert(1, "contribution_index", i)
         rows.append(ideas_df)
     if not rows:
-        return pd.DataFrame(columns=[
+        empty = pd.DataFrame(columns=[
             "author_id", "contribution_index", "description", "type", "syntax", "semantic"
         ])
+        return (empty, empty) if return_intermediate else empty
     result = pd.concat(rows, ignore_index=True)
 
     # Agrégation et calcul QualIT
@@ -198,4 +228,5 @@ def extraction_pipeline(
         data_extracted = data_extracted[data_extracted["qualit_score"] >= qualit_filter]
 
     # Résultats finaux
-    return data_extracted.reset_index(drop=True)
+    final_df = data_extracted.reset_index(drop=True)
+    return {"final": final_df, "intermediate": result} if return_intermediate else final_df
